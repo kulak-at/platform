@@ -35,6 +35,17 @@
             &:hover {
                 color: inherit;
             }
+
+            .text-success {
+              color: #3c763d;
+            }
+
+            .permalink-input-hidden {
+              width: 10px;
+              height: 10px;
+              opacity: 0.0001;
+              cursor: inherit;
+            }
         }
     }
 }

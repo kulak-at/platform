@@ -16,6 +16,8 @@ import DelayedAction from 'utils/delayed_action.jsx';
 import {Tooltip, OverlayTrigger, Overlay} from 'react-bootstrap';
 import EmojiPicker from 'components/emoji_picker/emoji_picker.jsx';
 
+import TeamStore from 'stores/team_store.jsx';
+
 import React from 'react';
 import {FormattedMessage} from 'react-intl';
 
@@ -32,6 +34,7 @@ export default class PostInfo extends React.Component {
         this.unpinPost = this.unpinPost.bind(this);
         this.reactEmojiClick = this.reactEmojiClick.bind(this);
         this.emojiPickerClick = this.emojiPickerClick.bind(this);
+        this.bindHandlePermalink = this.bindHandlePermalink.bind(this);
 
         this.canEdit = false;
         this.canDelete = false;
@@ -45,6 +48,7 @@ export default class PostInfo extends React.Component {
 
     handleDropdownOpened() {
         this.props.handleDropdownOpened(true);
+        this.setState({permalinkCopied: false});
 
         const position = $('#post-list').height() - $(this.refs.dropdownToggle).offset().top;
         const dropdown = $(this.refs.dropdown);
@@ -56,6 +60,17 @@ export default class PostInfo extends React.Component {
 
     handleEditDisable() {
         this.canEdit = false;
+    }
+
+    bindHandlePermalink(ref) {
+        if (!ref) {
+            return;
+        }
+
+        ref.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.handlePermalink(e);
+        });
     }
 
     componentDidMount() {
@@ -136,6 +151,22 @@ export default class PostInfo extends React.Component {
         }
 
         if (!isSystemMessage) {
+            var copyLinkMessage = (
+                <FormattedMessage
+                    id='get_link.copy'
+                    defaultMessage='Copy Link'
+                />);
+
+            if (this.state.permalinkCopied) {
+                copyLinkMessage = (<span className='text-success'>
+                    <i className='fa fa-check'/>
+                    <FormattedMessage
+                        id='get_link.clipboard'
+                        defaultMessage=' Link copied'
+                    />
+                </span>);
+            }
+
             dropdownContents.push(
                 <li
                     key='copyLink'
@@ -143,11 +174,13 @@ export default class PostInfo extends React.Component {
                 >
                     <a
                         href='#'
-                        onClick={this.handlePermalink}
+                        ref={this.bindHandlePermalink}
                     >
-                        <FormattedMessage
-                            id='post_info.permalink'
-                            defaultMessage='Permalink'
+                        {copyLinkMessage}
+                        <input
+                            className='permalink-input-hidden'
+                            defaultValue={TeamStore.getCurrentTeamUrl() + '/pl/' + this.props.post.id}
+                            ref='permalinkValue'
                         />
                     </a>
                 </li>
@@ -270,9 +303,23 @@ export default class PostInfo extends React.Component {
         );
     }
 
-    handlePermalink(e) {
-        e.preventDefault();
-        GlobalActions.showGetPostLinkModal(this.props.post);
+    handlePermalink() {
+        var input = this.refs.permalinkValue;
+
+        input.focus();
+        input.setSelectionRange(0, input.value.length);
+
+        try {
+            if (document.execCommand('copy')) {
+                this.setState({
+                    permalinkCopied: true
+                });
+            } else {
+                throw new Error('Cannot copy link');
+            }
+        } catch (e) {
+            GlobalActions.showGetPostLinkModal(this.props.post);
+        }
     }
 
     emojiPickerClick() {
